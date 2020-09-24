@@ -1,0 +1,139 @@
+try{
+   @Library('qds-shared-library@master') _
+   node(label:"slave3 || slave2") {
+   
+   branchName = getBranchName()
+   chartName = "account-management"
+      if ("${branchName}" == "master")
+      {
+         imageRepository = "qualitiads/account-management-master"
+         nexusRepoName = "qds-stable"
+      }else if("${branchName}" == "develop"){
+         imageRepository = "qualitiads/account-management-develop"
+         namespace = "test"
+         nexusRepoName = "qds-dev"
+      }else{
+         imageRepository = "qualitiads/account-management"
+         namespace = "helm-test"
+         nexusRepoName = "qds-ci"
+      }
+
+
+      stage('Cloning Git') {
+
+         deleteDir()
+         // Cloning account-management-poc repo         
+         gitCheckout(
+            url: "http://gitlab.hub/SwetaGupta16/Jenkins-Project/account-management.git",
+            branch: "${BRANCH_NAME}",
+            gitCredential: "gitlab-repo-access"
+         )
+
+         // Comparing default.json files
+         compareDefaultJson(
+            old_file: "config/default.json",
+            new_file: "default.json"
+         )
+         
+         sh 'rm config/default.json'              // deletes empty default.json
+         sh 'mv default.json config/'
+         sh 'mv test.json config/'
+         sh 'chmod +x start.sh'
+      }
+
+      stage("Install dependencies"){
+            
+         installDependencies()            
+      }
+
+      stage("Test case execution"){
+            
+         unitTest(reportDir: "unit-test-coverage")
+      }
+
+      // stage("Integration case execution"){
+           
+      //   integrationTest(reportDir: "int-test-coverage")
+      // }
+      stage("Docker build"){
+            
+         // Adding versioning logic below
+         patch = versionLogic("VERSION")
+         imageTag = "${branchName}-${patch}"
+         imageName = "${imageRepository}:${imageTag}"
+         echo  "Image name will be ${imageName}"
+         version = readFile("VERSION")         
+         dockerBuild(
+            imageName: "${imageName}",
+            dockerCredential: "qualitia-dockerhub-creds",
+            pushWithTag: "latest"
+            
+         )
+            
+      }
+      stage("Helm test"){
+         helmTest(
+            kubeConfigPath: '/home/ubuntu/kubeconfig',
+            chartName: "${chartName}",
+            imageTag: "${imageTag}",
+            imageRepository: "${imageRepository}"            
+         )
+
+      }
+      stage("Helm package")
+      {  
+         helmVersion = "${version}-${branchName}-${env.BUILD_NUMBER}"
+         sh "helm repo list"
+         helmPackage(
+            chartName: "${chartName}",
+            helmVersion: "${helmVersion}",
+            imageTag: "${imageTag}",
+            imageRepository: "${imageRepository}" 
+         )
+      }
+      stage("Helm publish")
+      {
+
+         helmPublish(
+            helmVersion: "${helmVersion}",
+            nexusRepoName: "${nexusRepoName}",
+            chartName: "${chartName}"
+         )
+      }
+      
+
+      stage("Email Notification"){
+            
+         def jobName = currentBuild.fullDisplayName
+         def body = '${SCRIPT, template="groovy-html.template"}'
+         def microService = "${chartName}"
+         wrap([$class: 'BuildUser']) {
+            def userEmailID = env.BUILD_USER_EMAIL
+            def userName = env.BUILD_USER
+            echo "Job is triggred by ${userName} and his email id is ${userEmailID}"
+            emailNotification(
+               mailRecipients: "${userEmailID}",
+               subject: "[Jenkins] ${jobName} from Jenkins CI",
+               body: "${body}"
+            )
+         }
+      }
+
+   }
+}
+catch(err) {
+
+   def mailRecipients = "dummy@gmail.com"
+   currentBuild.result = 'FAILURE'
+   wrap([$class: 'BuildUser']) {
+      def userEmailID = env.BUILD_USER_EMAIL
+      def userName = env.BUILD_USER
+      mail (
+        to: "${mailRecipients},${userEmailID}",
+        subject: "Job '${env.JOB_NAME}' (${env.BUILD_NUMBER}) Failed ...!!!",
+        body: """<p>${env.JOB_NAME} failed...Check the error logs at <a href="${env.BUILD_URL}">${env.JOB_NAME}</a></p>""",
+        mimeType:'text/html'
+      )
+   }
+             
+}
