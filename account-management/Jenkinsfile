@@ -1,0 +1,94 @@
+node {
+    
+    def USERNAME = "qualitiads"
+    def PASSWORD = "xxxxxxxx"
+    def dockerRepoUrl = "https://cloud.docker.com/repository/registry-1.docker.io/sweta1010/account-management"
+    
+    stage('Cloning Git') {
+         deleteDir()
+                checkout([$class: 'GitSCM', 
+                branches: [[name: 'develop']], 
+                doGenerateSubmoduleConfigurations: false, 
+                extensions: [], 
+                submoduleCfg: [], 
+                userRemoteConfigs: [[credentialsId: 'gitlab-creds', 
+                url: 'http://github.com/SwetaGupta16/qualitia/design-studio/devops-account-management.git']]]) 
+                sh 'mkdir config_files && cp Dockerfile default.json custom-environment-variables.json start.sh config_files/'
+                sh 'chmod +x config_files/start.sh'
+               
+               // fetching on-boarding repo 
+                checkout([$class: 'GitSCM', 
+                branches: [[name: 'feature/milestone-3']], 
+                doGenerateSubmoduleConfigurations: false, 
+                extensions: [], 
+                submoduleCfg: [], 
+                userRemoteConfigs: [[credentialsId: 'gitlab-creds', 
+                url: 'http://github.com/SwetaGupta16/qualitia/design-studio/account-management.git']]])
+                sh '######### echo this is account-management start ########'
+                sh 'ls -lrt'
+                sh 'rm config/default.json'              // deletes empty default.json
+                sh 'mv config_files/* . && rmdir config_files'
+                
+                sh 'mv default.json custom-environment-variables.json config/'
+                sh 'pwd'
+                sh 'echo "this is my working directory"'
+                
+            // Adding versioning logic below
+            version = readFile('VERSION')
+            sh 'echo $version'
+            versions = version.split('\\.')
+            sh "echo  this semantic versioning $versions"
+            major = versions[0]
+            minor = versions[1]
+            micro = versions[2]
+            patch = major + '.' + minor + '.' + micro + '.' + "${env.BUILD_NUMBER}"
+
+        
+    }
+        
+    stage('Install dependencies') {
+        //sh 'sudo apt-get install -y docker'
+        //sh 'curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -'
+        //sh 'sudo apt-get install -y nodejs'
+        sh 'node --version'
+        sh 'npm --version'
+        sh 'npm install'
+    
+      }
+     
+   /* stage('Test') {
+         sh 'npm test'
+    }      */
+    
+    stage('docker build'){
+            echo "docker build Running."
+            echo "####Credentials : ${USERNAME} ${env.BUILD_NUMBER}"
+            dockerImage = docker.build("qualitiads/account-management:${patch}")
+            docker.withRegistry('', 'qualitia-dockerhub-creds') { 
+            sh "docker login -u ${USERNAME} -p ${PASSWORD}"
+            dockerImage.push()
+            echo "####Docker image pushed successfully...."
+            dockerImage.push('account-management-latest')
+            echo "####Docker image with latest tag pushed successfully...."
+            echo "echo ${USERNAME} ${env.BUILD_NUMBER}"
+    }
+    stage('kubectl'){
+        
+          sh 'kubectl get pods --kubeconfig /home/ubuntu/kubeconfig'     
+          docker.withRegistry('', 'qualitia-dockerhub-creds') { 
+                sh "docker login -u ${USERNAME} -p ${PASSWORD}"
+            }
+           sh "kubectl set image deployments/account-management account-management=qualitiads/account-management:${patch} --kubeconfig /home/ubuntu/kubeconfig"
+          sh 'kubectl describe pods --kubeconfig /home/ubuntu/kubeconfig | grep Image'
+        }
+    stage('Email Notification'){
+          emailext (
+          subject: "Job '${env.JOB_NAME} ${patch}'",
+          body: """<p>Check console output at <a href="${env.BUILD_URL}">${env.JOB_NAME}</a></p>""",
+          to: "sweta.gupta@gmail.com",
+          from: "noreply@gmail.com"
+          )
+          
+      } 
+    }
+}

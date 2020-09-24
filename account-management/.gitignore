@@ -1,0 +1,12 @@
+node_modules/
+package-lock.json
+logs/
+app.dev.js
+config/development.json
+.eslintrc.json
+.eslintignore
+config/test.json
+.nyc_output/
+.scannerwork/
+unit-test-coverage/
+int-test-coverage/

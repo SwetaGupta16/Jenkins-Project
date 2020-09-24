@@ -1,0 +1,15 @@
+/node_modules
+/package-lock.json
+/logs
+*.bak
+/.vscode
+.gitignore
+.gitlab-ci.yml
+.prettierignore
+.prettierrc
+sonar-project.properties
+test/integration/.nycrc
+test/integration/mocha.opts
+test/unit/.nycrc
+test/unit/mocha.opts
+.eslintignore

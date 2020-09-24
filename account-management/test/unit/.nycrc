@@ -1,0 +1,21 @@
+{
+  "include": [
+    "app/**/*.js"
+  ],
+  "reporter": [
+    "text",
+    "html",
+    "lcov",
+    "cobertura"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/test/**",
+    "**/unit-test-coverage/**",
+    "**/int-test-coverage/**",
+    "app/dal/**",
+    "app/graphql-api/**"
+  ],
+  "all": true,
+  "report-dir": "unit-test-coverage"
+}

@@ -1,0 +1,57 @@
+{
+  "name": "account-management",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "export NODE_ENV=development && cp app.js app.dev.js && perl -pi -e '$_ .=qq(app.use(require(\"cors\")());\n) if /<development-script> <set-cors>/' app.dev.js && node app.dev.js",
+    "debug": "export NODE_ENV=development && cp app.js app.dev.js && perl -pi -e '$_ .=qq(app.use(require(\"cors\")());\n) if /<development-script> <set-cors>/' app.dev.js && node --inspect-brk=9229 app.dev.js",
+    "start": "node ./app",
+    "test": "mocha || true",
+    "unit-test": "nyc --nycrc-path ./test/unit/.nycrc npm run unit-test:local",
+    "unit-test:local": "export NODE_ENV=test && mocha --opts ./test/unit/mocha.opts",
+    "int-test": "nyc --nycrc-path ./test/integration/.nycrc npm run int-test:local",
+    "int-test:local": "export NODE_ENV=test && mocha --opts ./test/integration/mocha.opts",
+    "pretty-quick": "pretty-quick --staged --pattern './**/*.*'"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run pretty-quick",
+      "pre-push": "npm run unit-test:local"
+    }
+  },
+  "author": "",
+  "dependencies": {
+    "bcrypt": "^3.0.4",
+    "config": "^3.0.1",
+    "crypto": "^1.0.1",
+    "express": "^4.16.4",
+    "express-graphql": "^0.7.1",
+    "graphql": "^14.0.2",
+    "graphql-tools": "^4.0.3",
+    "lodash": "^4.17.11",
+    "moment": "^2.24.0",
+    "neo4j-driver": "^1.7.2",
+    "node-cron": "^2.0.3",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.4",
+    "winston": "^3.1.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-http": "^4.3.0",
+    "chai-js-factories": "^0.1.5",
+    "cors": "^2.8.5",
+    "deepmerge": "^4.0.0",
+    "faker": "^4.1.0",
+    "husky": "^3.1.0",
+    "mocha": "^6.1.4",
+    "mocha-prepare": "^0.1.0",
+    "mock-require": "^3.0.3",
+    "nyc": "^14.1.1",
+    "prettier": "^1.19.1",
+    "pretty-quick": "^2.0.1",
+    "sinon": "^7.3.2",
+    "supertest": "^4.0.2"
+  }
+}

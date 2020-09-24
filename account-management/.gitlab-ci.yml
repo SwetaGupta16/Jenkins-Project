@@ -1,0 +1,52 @@
+stages:
+    - unit test
+    - analysis 
+    - integration test
+
+unit_test:
+    stage: unit test
+    tags:
+      - cluster,sonar
+      
+    script:
+      - npm install
+      - npm run unit-test
+    artifacts:
+      paths:
+       - unit-test-coverage/ 
+
+sonarqube:
+  stage: analysis
+  tags :
+   - cluster,sonar 
+  dependencies:
+   - unit_test
+
+
+
+  variables:
+    SONAR_URL: http://sonarqube.qualitia.biz:9000
+    SONAR_ANALYSIS_MODE: publish
+    SONAR_LOGIN : 4ff5b83ca9cd0ed840deb2970bb3fc8aa7ed4061
+  script:
+     - if [ "$CI_COMMIT_REF_NAME" == "develop" ]; then SONAR_ANALYSIS_MODE="publish"; else SONAR_ANALYSIS_MODE="preview"; fi 
+     - /usr/local/bin/sonar-scanner/bin/sonar-scanner -Dsonar.host.url=$SONAR_URL -Dsonar.login=$SONAR_LOGIN -Dsonar.analysis.mode=$SONAR_ANALYSIS_MODE -Dsonar.gitlab.commit_sha=$CI_COMMIT_SHA -Dsonar.gitlab.ref_name=$CI_COMMIT_REF_NAME  -Dsonar.gitlab.project_id=$CI_PROJECT_ID -Dsonar.gitlab.url=http://10.0.1.56 -Dsonar.gitlab.user_token=ZHBacZtXG3uoT8JfumuC -Dsonar.gitlab.unique_issue_per_inline=true -Dsonar.gitlab.comment_no_issue=true
+
+
+
+integration_test:
+     stage: integration test
+     tags:
+      - cluster,sonar
+     only:
+      - merge_request
+     variables:
+       NEO4J_AUTH: none
+     services:
+      - name: neo4j:3.5.5
+        alias: neo4j
+        
+     script:
+      - cat config/default.json |jq '.accountManagement.port="4501"' | jq '.neo4j.userName= "neo4j"' | jq '.neo4j.password="root"' |jq '.neo4j.boltURI="bolt://localhost:7687"' |jq '.syncTime= "0 0 * * *"'> config/test.json
+      - npm install
+      - npm run int-test

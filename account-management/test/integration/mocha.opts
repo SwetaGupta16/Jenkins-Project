@@ -1,0 +1,6 @@
+--globals global
+--require ./test/integration/setup
+--recursive ./test/integration
+--colors
+--timeout 10000
+--exit

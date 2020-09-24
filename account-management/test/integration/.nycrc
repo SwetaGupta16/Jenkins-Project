@@ -1,0 +1,19 @@
+{
+  "include": [
+    "app/dal/**"
+  ],
+  "reporter": [
+    "text",
+    "html",
+    "lcov",
+    "cobertura"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/test/**",
+    "**/unit-test-coverage/**",
+    "**/int-test-coverage/**"
+  ],
+  "all": true,
+  "report-dir": "int-test-coverage"
+}

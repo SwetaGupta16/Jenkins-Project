@@ -1,0 +1,22 @@
+{
+  "accountManagement": {
+    "port": "",
+    "logging": {
+      "logDir": "",
+      "logFileName": "",
+      "logLevel": ""
+    }
+  },
+  "neo4j": {
+    "boltURI": "",
+    "userName": "",
+    "password": ""
+  },
+  "notificationEndpoint": "",
+  "notificationPrefix": "",
+  "uiLink": "",
+  "integrationService": "",
+  "accountManagementService": "",
+  "encryptionKey": "",
+  "syncTime": ""
+}
